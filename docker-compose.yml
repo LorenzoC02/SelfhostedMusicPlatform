@@ -1,0 +1,5 @@
+volumes: 
+  nginx-data:
+    driver: nginx
+  shared-media:
+    driver: 
