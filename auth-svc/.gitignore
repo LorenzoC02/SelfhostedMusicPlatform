@@ -34,3 +34,4 @@ build/
 
 ### Security ###
 src/main/resources/jwt/
+.mvn/wrapper/
