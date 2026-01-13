@@ -3,6 +3,10 @@ package com.selfhost.auth.auth_svc;
 import java.time.Duration;
 import java.time.Instant;
 
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
