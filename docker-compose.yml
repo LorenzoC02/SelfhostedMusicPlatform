@@ -61,7 +61,7 @@ services:
 
 
   auth-svc:
-    build: ./services/auth-svc
+    build: ./auth-svc
     container_name: auth-svc
     restart: on-failure
     environment:
