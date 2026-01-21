@@ -8,7 +8,7 @@ app.use(express.json());
 // Sync database
 const initApp = async () => {
   await connectDB();
-  await sequelize.sync(); // Using sync for simplicity as per guide.md suggestion
+  await sequelize.sync();
   console.log('Database synced');
 };
 
