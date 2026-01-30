@@ -1,0 +1,61 @@
+_format_version: "3.0"
+_transform: true
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Authorization
+        - Content-Type
+        - Keep-Alive
+        - Origin
+        - User-Agent
+        - X-Requested-With
+      exposed_headers:
+        - Content-Length
+        - Content-Range
+      max_age: 3600
+      credentials: true
+      preflight_continue: false
+
+services:
+  - name: auth-service
+    url: http://auth-svc:8080
+    routes:
+      - name: auth-route
+        paths:
+          - /api/auth
+        strip_path: false
+
+  - name: playlist-service
+    url: http://playlist-svc:3000
+    routes:
+      - name: playlist-route
+        paths:
+          - /api/playlists
+        strip_path: false
+
+  - name: streaming-service
+    url: http://streaming-svc:8082
+    routes:
+      - name: streaming-route
+        paths:
+          - /api/stream
+        strip_path: false
+
+  - name: content-service
+    url: http://content-svc:3000
+    routes:
+      - name: content-route
+        paths:
+          - /api/content
+        strip_path: false

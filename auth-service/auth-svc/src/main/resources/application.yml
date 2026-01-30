@@ -1,0 +1,27 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+  flyway:
+    baseline-on-migrate: true
+  application:
+    name: auth-svc
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/music_db}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+jwt:
+  private-key: classpath:jwt/app.key
+  public-key: classpath:jwt/app.pub
+  ttl: 15m

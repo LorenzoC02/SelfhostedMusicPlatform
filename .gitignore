@@ -1,0 +1,60 @@
+# Environment & Secrets (CRITICAL)
+.env
+*.env
+*.key
+*.pem
+*.crt
+*.jks
+*.p12
+
+# OS Shortcuts & Metadata
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.iml
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+coverage/
+dist/
+build/
+.docusaurus/
+.cache/
+
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Go
+# Binaries
+*.exe
+*.test
+*.out
+streaming-svc.exe
+# Vendor
+vendor/
+
+# Docker
+.docker/
+
+# Media Uploads (User Content)
+/media/uploads/*
+!/media/uploads/.gitkeep
+*.log
+
+# Misc
+tmp/
+temp/
+Mayhem - Freezing Moon (HQ).mp3

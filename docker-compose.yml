@@ -1,0 +1,174 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: music_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: music_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d music_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongodb:
+    image: mongo:6.0
+    container_name: music_mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: music_redis
+    networks:
+      - internal-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: music_kafka
+    networks:
+      - internal-net
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092"
+      KAFKA_JBN_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:29092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LOG_DIRS: "/tmp/kraft-combined-logs"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  auth-svc:
+    build: ./auth-service/auth-svc
+    container_name: auth-svc
+    restart: on-failure
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/music_db
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal-net
+
+  content-svc:
+    build: ./content-svc
+    container_name: content-svc
+    restart: on-failure
+    environment:
+      - PG_USER=admin
+      - PG_HOST=postgres
+      - PG_DATABASE=music_db
+      - PG_PASSWORD=${POSTGRES_PASSWORD}
+      - PG_PORT=5432
+      - MONGO_URI=${MONGO_URI}
+      - MEDIA_STORAGE_PATH=/media/uploads
+    volumes:
+      - media_storage:/media/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+    networks:
+      - internal-net
+
+  playlist-svc:
+    build: ./playlist-service/playlist-svc
+    container_name: playlist-svc
+    restart: on-failure
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal-net
+
+  streaming-svc:
+    build: ./streaming-svc
+    container_name: streaming-svc
+    restart: on-failure
+    environment:
+      - KAFKA_ADDR=kafka:9092
+      - MEDIA_PATH=/media/uploads
+      - PUBLIC_KEY_PATH=/app/keys/app.pub
+    volumes:
+      - media_storage:/media/uploads:ro
+      - ./auth-service/auth-svc/src/main/resources/jwt:/app/keys:ro
+    depends_on:
+      - redis
+      - kafka
+      - content-svc
+    networks:
+      - internal-net
+
+  api-gateway:
+    image: kong:latest
+    container_name: kong-gateway
+    restart: always
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+    volumes:
+      - ./api-gateway/kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+      - "8444:8444"
+    depends_on:
+      auth-svc:
+        condition: service_started
+      content-svc:
+        condition: service_started
+      playlist-svc:
+        condition: service_started
+      streaming-svc:
+        condition: service_started
+    networks:
+      - internal-net
+
+  frontend:
+    image: nginx:alpine
+    container_name: music_frontend
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    ports:
+      - "8087:80"
+    networks:
+      - internal-net
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
+  mongo_data:
+  media_storage:
+
+networks:
+  internal-net:
+    driver: bridge
